@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Get Grocery Unit Compare</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#101c30;color:#f2f4f7;display:flex;flex-direction:column;min-height:100vh}
+.wrap{max-width:480px;margin:auto;padding:32px 20px;text-align:center}
+.logo{width:96px;height:96px;border-radius:22px}
+h1{margin:12px 0 6px}
+p{color:#9aa7bd;line-height:1.55}
+.btn{display:inline-block;background:#c9a24b;color:#101c30;font-weight:700;font-size:18px;padding:16px 32px;border-radius:14px;text-decoration:none;margin-top:16px}
+.fine{font-size:13px;margin-top:12px}
+footer{text-align:center;padding:14px;font-size:12px;color:#9aa7bd}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <img class="logo" src="icon.png" alt="Grocery Unit Compare icon">
+  <h1>Grocery Unit Compare</h1>
+  <p>Find the real cheapest price. Compare up to 4 items by unit price ($/100g), with multi-pack support, price history, and sale-spotting.</p>
+  <div id="android">
+    <a class="btn" href="https://github.com/Pappyakins/grocery-unit-compare/releases/download/v1.0/grocery-unit-compare-1.0.apk">Download for Android</a>
+    <p class="fine">v1.0 · Free · No account · Works offline</p>
+  </div>
+  <div id="iphone" style="display:none">
+    <a class="btn" href="https://pappyakins.github.io/grocery-unit-compare/">Open the Web App</a>
+    <p class="fine">On iPhone: open in Safari → Share → Add to Home Screen.</p>
+  </div>
+</div>
+<footer>Powered by @jakinsCraft</footer>
+<script>
+if(/iPhone|iPad|iPod/.test(navigator.userAgent)){
+  document.getElementById('android').style.display='none';
+  document.getElementById('iphone').style.display='block';
+}
+</script>
+</body>
+</html>
