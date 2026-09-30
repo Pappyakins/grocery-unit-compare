@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#101c30">
+<title>Grocery Unit Compare</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="icon.png">
+</head>
+<body>
+<header>
+  <img src="icon.png" alt="JakinsCraft logo" class="logo">
+  <div class="head-text">
+    <h1>Grocery Unit Compare</h1>
+    <p>Find the real cheapest price</p>
+  </div>
+</header>
+
+<main>
+  <section id="tab-compare" class="tab active">
+    <div id="items"></div>
+    <button id="addItem" class="btn secondary" type="button">+ Add item</button>
+    <div id="results"></div>
+    <div class="actions">
+      <button id="saveBtn" class="btn primary" type="button">Save to history</button>
+      <button id="clearBtn" class="btn ghost" type="button">Clear</button>
+    </div>
+    <p class="hint">Tip: name an item to check it against your price history.</p>
+  </section>
+
+  <section id="tab-history" class="tab">
+    <div id="historyList"></div>
+  </section>
+</main>
+
+<nav class="bottomnav">
+  <button type="button" data-tab="tab-compare" class="active">Compare</button>
+  <button type="button" data-tab="tab-history">History</button>
+</nav>
+<footer>Powered by @jakinsCraft</footer>
+
+<div id="toast" class="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
