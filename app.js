@@ -70,6 +70,7 @@ function renderItems() {
     card.innerHTML =
       '<div class="card-head">' +
         '<input class="iname" placeholder="Product name (optional)" value="' + esc(item.name) + '">' +
+        (scanNative() ? '<button type="button" class="scan-btn" title="Scan price tag">📷</button>' : '') +
         '<span class="best-badge" hidden>BEST</span>' +
       '</div>' +
       '<input class="istore" placeholder="Store (optional)" value="' + esc(item.store) + '">' +
@@ -80,8 +81,15 @@ function renderItems() {
       '</div>' +
       '<label class="pack"><input type="checkbox" class="ipack"' + (item.packOn ? ' checked' : '') + '> Pack of ' +
         '<input class="ipackn" inputmode="numeric" value="' + esc(item.packN) + '"></label>' +
+      scanConfirmHtml(i) +
       '<div class="perunit"></div><div class="insight"></div>';
     wire(card, i);
+    const sb = card.querySelector('.scan-btn');
+    if (sb) sb.addEventListener('click', () => startScan(i, sb));
+    const ap = card.querySelector('.scan-apply');
+    if (ap) ap.addEventListener('click', applyScan);
+    const dx = card.querySelector('.scan-dismiss');
+    if (dx) dx.addEventListener('click', () => { pendingScan = null; renderItems(); });
     itemsEl.appendChild(card);
   });
   document.getElementById('addItem').style.display = items.length >= MAX_ITEMS ? 'none' : 'block';
@@ -110,6 +118,122 @@ function esc(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }
 function money(n) { return '$' + n.toFixed(2); }
+
+/* ---- price-tag scan (native app only; hidden in browsers) ---- */
+function scanNative() {
+  try {
+    return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) &&
+      typeof window.__scanPriceTag === 'function';
+  } catch (e) { return false; }
+}
+let pendingScan = null; // { i, price, qty, unit }
+
+function normNum(s) {
+  s = String(s).trim();
+  if (s.indexOf(',') >= 0 && s.indexOf('.') >= 0) return s.replace(/,/g, '');
+  if (s.indexOf(',') >= 0) return s.replace(/,/g, '.');
+  return s;
+}
+function mapScanUnit(u) {
+  u = String(u).toLowerCase();
+  if (u === 'kg') return 'kg';
+  if (u === 'g') return 'g';
+  if (u === 'oz') return 'oz';
+  if (u === 'lb') return 'lb';
+  if (u === 'ml') return 'ml';
+  if (u === 'l') return 'L';
+  return null;
+}
+function parseScan(text) {
+  const t = ' ' + String(text || '') + ' ';
+  let price = null, pIdx = -1, m;
+  const dollarRe = /\$\s*(\d{1,3}(?:[.,]\d{3})*[.,]\d{2})/g;
+  if ((m = dollarRe.exec(t))) {
+    price = normNum(m[1]);
+    pIdx = m.index;
+  } else {
+    const bareRe = /(\d+[.,]\d{2})(?!\d)/g;
+    if ((m = bareRe.exec(t))) {
+      price = normNum(m[1]);
+      pIdx = m.index;
+    }
+  }
+  let qty = null, unit = null, bestD = Infinity;
+  const sizeRe = /(\d+(?:[.,]\d+)?)\s*(kg|oz|lb|ml|g|l)\b/gi;
+  let sm;
+  while ((sm = sizeRe.exec(t))) {
+    const u = mapScanUnit(sm[2]);
+    if (!u) continue;
+    const d = pIdx >= 0 ? Math.abs(sm.index - pIdx) : 0;
+    if (d < bestD) {
+      bestD = d;
+      qty = normNum(sm[1]);
+      unit = u;
+    }
+  }
+  return { price: price, qty: qty, unit: unit };
+}
+
+function scanConfirmHtml(i) {
+  const p = pendingScan;
+  if (!p || p.i !== i) return '';
+  const bits = [];
+  if (p.price) bits.push('<b>$' + esc(p.price) + '</b>');
+  if (p.qty) bits.push('<b>' + esc(p.qty) + ' ' + esc((UNITS[p.unit] || {}).label || '') + '</b>');
+  if (!bits.length) return '';
+  return '<div class="scan-confirm">Found ' + bits.join(', ') +
+    ' <button type="button" class="scan-apply">Apply</button>' +
+    '<button type="button" class="scan-dismiss" aria-label="Dismiss">✕</button></div>';
+}
+
+async function startScan(i, btn) {
+  const old = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '…';
+  const restore = () => { btn.disabled = false; btn.innerHTML = old; };
+  try {
+    const text = await window.__scanPriceTag();
+    const f = parseScan(text);
+    if (!f.price && !f.qty) {
+      restore();
+      toast('No price found — hold the label steady and try again.');
+      return;
+    }
+    const item = items[i];
+    const hasValues = String(item.price).trim() !== '' || String(item.qty).trim() !== '';
+    if (!hasValues) {
+      if (f.price) item.price = f.price;
+      if (f.qty) { item.qty = f.qty; if (f.unit) item.unit = f.unit; }
+      else if (f.unit) item.unit = f.unit;
+      renderItems();
+      toast('Scanned ✓ — check the values.');
+    } else {
+      pendingScan = { i: i, price: f.price, qty: f.qty, unit: f.unit };
+      renderItems();
+    }
+  } catch (e) {
+    restore();
+    const msg = (e && e.message) || '';
+    if ((e && e.code === 'permission-denied') || /denied/i.test(msg)) {
+      toast('Camera blocked — allow it in App info → Permissions.');
+    } else {
+      toast('Scan cancelled.');
+    }
+  }
+}
+
+function applyScan() {
+  const p = pendingScan;
+  pendingScan = null;
+  if (p && items[p.i]) {
+    const item = items[p.i];
+    if (p.price) item.price = p.price;
+    if (p.qty) { item.qty = p.qty; if (p.unit) item.unit = p.unit; }
+    else if (p.unit) item.unit = p.unit;
+  }
+  renderItems();
+  toast('Scanned values applied ✓');
+}
 
 function updateResults() {
   const cards = itemsEl.querySelectorAll('.card.item');
